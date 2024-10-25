@@ -8,8 +8,12 @@
 <body>
     <div id="startScreen">
         <h1>Math Snake Game</h1>
-        <label for="targetInput">Select Target Number:</label>
-        <input type="number" id="targetInput" value="10" min="5" max="50">
+        <label>Select Number Multiples:</label>
+        <select id="multipleSelect">
+            <option value="1">Single Numbers</option>
+            <option value="5">Multiples of 5</option>
+            <option value="10">Multiples of 10</option>
+        </select>
         <br><br>
         <label for="colorInput">Choose Snake Color:</label>
         <input type="color" id="colorInput" value="#4CAF50">

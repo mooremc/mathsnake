@@ -11,15 +11,17 @@ let snakeColor = '#4CAF50';
 let numbers = [];
 let targetNumber = 10;
 let currentCount = 0;
+let numberMultiple = 1;
 
 let flashTimer = 0;
 let isFlashing = false;
+let gameOver = false;
 
 let leaderboard = [];
 
 // Start screen elements
 const startScreen = document.getElementById('startScreen');
-const targetInput = document.getElementById('targetInput');
+const multipleSelect = document.getElementById('multipleSelect');
 const colorInput = document.getElementById('colorInput');
 const startButton = document.getElementById('startButton');
 
@@ -34,8 +36,17 @@ restartButton.addEventListener('click', showStartScreen);
 
 function startGame() {
     // Get user inputs
-    targetNumber = parseInt(targetInput.value);
+    numberMultiple = parseInt(multipleSelect.value);
     snakeColor = colorInput.value;
+
+    // Automatically set targetNumber
+    if (numberMultiple === 1) {
+        targetNumber = 10;
+    } else if (numberMultiple === 5) {
+        targetNumber = 50;
+    } else if (numberMultiple === 10) {
+        targetNumber = 100;
+    }
 
     // Hide start screen and show canvas
     startScreen.style.display = 'none';
@@ -55,6 +66,7 @@ function showStartScreen() {
 
 // Initialize the game
 function resetGame() {
+    gameOver = false;
     currentCount = 0;
     direction = '';
     snake = [];
@@ -70,11 +82,15 @@ function resetGame() {
 
 function getRandomNumber() {
     let nums;
-    if (currentCount > targetNumber) {
+    if (currentCount >= targetNumber) {
         nums = [-1, -2, -3, -4, -5]; // Provide negative numbers
     } else {
         nums = [1, 2, 3, 4, 5]; // Provide positive numbers
     }
+
+    // Multiply numbers by numberMultiple
+    nums = nums.map(num => num * numberMultiple);
+
     return nums[Math.floor(Math.random() * nums.length)];
 }
 
@@ -127,7 +143,7 @@ function drawNumbers() {
         ctx.fill();
         ctx.fillStyle = '#fff';
         ctx.font = '16px Arial';
-        ctx.fillText(number.value, number.x - 5, number.y + 5);
+        ctx.fillText(number.value, number.x - 10, number.y + 5);
     });
 }
 
@@ -161,11 +177,13 @@ function checkCollision() {
 
             // Adjust snake length
             if (number.value > 0) {
-                for (let i = 0; i < number.value; i++) {
+                let segmentsToAdd = number.value / numberMultiple;
+                for (let i = 0; i < segmentsToAdd; i++) {
                     snake.push({ x: snake[snake.length - 1].x, y: snake[snake.length - 1].y });
                 }
             } else {
-                snake.splice(-number.value);
+                let segmentsToRemove = Math.min(snake.length - 1, Math.abs(number.value / numberMultiple));
+                snake.splice(-segmentsToRemove);
                 if (snake.length < 1) snake.push({ x: snake[0].x, y: snake[0].y });
             }
 
@@ -181,7 +199,8 @@ function checkCollision() {
 }
 
 function checkWin() {
-    if (currentCount === targetNumber) {
+    if (!gameOver && currentCount === targetNumber) {
+        gameOver = true;
         setTimeout(() => {
             alert('Congratulations! You reached the target number!');
             updateLeaderboard();
@@ -217,8 +236,8 @@ function clearCanvas() {
 function drawText() {
     ctx.fillStyle = '#fff';
     ctx.font = '20px Arial';
-    ctx.fillText(`Target: ${targetNumber}`, canvas.width - 150, 30);
-    ctx.fillText(`Your Count: ${currentCount}`, canvas.width - 150, 60);
+    ctx.fillText(`Target: ${targetNumber}`, canvas.width - 200, 30);
+    ctx.fillText(`Your Count: ${currentCount}`, canvas.width - 200, 60);
 }
 
 function handleFlash() {
@@ -227,7 +246,7 @@ function handleFlash() {
         if (flashTimer % 10 < 5) {
             ctx.fillStyle = 'yellow';
             ctx.font = '20px Arial';
-            ctx.fillText(`Your Count: ${currentCount}`, canvas.width - 150, 60);
+            ctx.fillText(`Your Count: ${currentCount}`, canvas.width - 200, 60);
         }
         if (flashTimer > 30) {
             isFlashing = false;
