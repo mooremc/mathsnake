@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Math Snake Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="startScreen">
+        <h1>Math Snake Game</h1>
+        <label for="targetInput">Select Target Number:</label>
+        <input type="number" id="targetInput" value="10" min="5" max="50">
+        <br><br>
+        <label for="colorInput">Choose Snake Color:</label>
+        <input type="color" id="colorInput" value="#4CAF50">
+        <br><br>
+        <button id="startButton">Start Game</button>
+    </div>
+    <canvas id="gameCanvas" width="800" height="600" style="display: none;"></canvas>
+    <div id="leaderboard" style="display: none;">
+        <h2>Leaderboard</h2>
+        <ol id="scoreList"></ol>
+        <button id="restartButton">Play Again</button>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
