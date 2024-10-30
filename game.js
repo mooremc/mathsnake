@@ -4,7 +4,7 @@ const ctx = canvas.getContext('2d');
 // Game variables
 let snake = [];
 let snakeSize = 20; // Size of each segment
-let snakeSpeed = 2;
+let snakeSpeed = 200; // Speed in pixels per second
 let direction = '';
 let snakeColor = '#4CAF50';
 
@@ -63,7 +63,10 @@ function startGame() {
     lastRunId++; // Increment run ID to identify the most recent run
 
     resetGame();
-    gameLoop();
+
+    // Initialize lastFrameTime and start the game loop via requestAnimationFrame
+    lastFrameTime = performance.now();
+    requestAnimationFrame(gameLoop);
 }
 
 function showStartScreen() {
@@ -80,7 +83,7 @@ function resetGame() {
     direction = '';
     snake = [];
     // Initialize snake with a fixed length
-    const initialLength = 5; // Set the fixed length you prefer
+    const initialLength = 10; // Increased from 5 to 10 to make the snake twice as long
     for (let i = 0; i < initialLength; i++) {
         snake.push({
             x: canvas.width / 2 - i * snakeSize,
@@ -109,7 +112,7 @@ function getRandomNumber() {
 
 function spawnNumber() {
     const angle = Math.random() * 2 * Math.PI;
-    const speed = 1.5;
+    const speed = 100; // Speed in pixels per second
     const number = {
         x: Math.random() * (canvas.width - 30) + 15,
         y: Math.random() * (canvas.height - 30) + 15,
@@ -128,18 +131,21 @@ function drawSnake() {
     }
 }
 
-function updateSnake() {
+function updateSnake(deltaTime) {
     // Move snake segments
     for (let i = snake.length - 1; i > 0; i--) {
         snake[i].x = snake[i - 1].x;
         snake[i].y = snake[i - 1].y;
     }
 
+    // Calculate distance to move based on time elapsed
+    let distance = (snakeSpeed * deltaTime) / 1000;
+
     // Update head position
-    if (direction === 'right') snake[0].x += snakeSpeed;
-    if (direction === 'left') snake[0].x -= snakeSpeed;
-    if (direction === 'up') snake[0].y -= snakeSpeed;
-    if (direction === 'down') snake[0].y += snakeSpeed;
+    if (direction === 'right') snake[0].x += distance;
+    if (direction === 'left') snake[0].x -= distance;
+    if (direction === 'up') snake[0].y -= distance;
+    if (direction === 'down') snake[0].y += distance;
 
     // Boundary conditions
     if (snake[0].x < 0) snake[0].x = 0;
@@ -160,17 +166,23 @@ function drawNumbers() {
     });
 }
 
-function updateNumbers() {
+function updateNumbers(deltaTime) {
     numbers.forEach((number) => {
-        number.x += number.dx;
-        number.y += number.dy;
+        // Calculate distance to move based on time elapsed
+        let distanceX = (number.dx * deltaTime) / 1000;
+        let distanceY = (number.dy * deltaTime) / 1000;
+
+        number.x += distanceX;
+        number.y += distanceY;
 
         // Bounce off walls
         if (number.x - number.radius < 0 || number.x + number.radius > canvas.width) {
             number.dx = -number.dx;
+            number.x = Math.max(number.radius, Math.min(canvas.width - number.radius, number.x));
         }
         if (number.y - number.radius < 0 || number.y + number.radius > canvas.height) {
             number.dy = -number.dy;
+            number.y = Math.max(number.radius, Math.min(canvas.height - number.radius, number.y));
         }
     });
 }
@@ -331,12 +343,17 @@ function handleFlash() {
     }
 }
 
-function gameLoop() {
+let lastFrameTime = performance.now();
+
+function gameLoop(currentTime) {
+    let deltaTime = currentTime - lastFrameTime;
+    lastFrameTime = currentTime;
+
     clearCanvas();
     drawSnake();
     drawNumbers();
-    updateSnake();
-    updateNumbers();
+    updateSnake(deltaTime);
+    updateNumbers(deltaTime);
     checkCollision();
     drawText();
     handleFlash();
