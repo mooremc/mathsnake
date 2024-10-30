@@ -17,6 +17,10 @@ let flashTimer = 0;
 let isFlashing = false;
 let gameOver = false;
 
+let startTime;
+let numbersEaten = 0; // Renamed from moves
+let lastRunId = 0; // To identify the most recent run
+
 let leaderboard = [];
 
 // Start screen elements
@@ -53,6 +57,11 @@ function startGame() {
     canvas.style.display = 'block';
     leaderboardDiv.style.display = 'none';
 
+    // Initialize time and numbersEaten
+    startTime = Date.now();
+    numbersEaten = 0;
+    lastRunId++; // Increment run ID to identify the most recent run
+
     resetGame();
     gameLoop();
 }
@@ -70,10 +79,14 @@ function resetGame() {
     currentCount = 0;
     direction = '';
     snake = [];
-    snake[0] = {
-        x: canvas.width / 2,
-        y: canvas.height / 2
-    };
+    // Initialize snake with a fixed length
+    const initialLength = 5; // Set the fixed length you prefer
+    for (let i = 0; i < initialLength; i++) {
+        snake.push({
+            x: canvas.width / 2 - i * snakeSize,
+            y: canvas.height / 2
+        });
+    }
     numbers = [];
     for (let i = 0; i < 5; i++) {
         spawnNumber();
@@ -175,17 +188,8 @@ function checkCollision() {
             // Prevent currentCount from going below zero
             if (currentCount < 0) currentCount = 0;
 
-            // Adjust snake length
-            if (number.value > 0) {
-                let segmentsToAdd = number.value / numberMultiple;
-                for (let i = 0; i < segmentsToAdd; i++) {
-                    snake.push({ x: snake[snake.length - 1].x, y: snake[snake.length - 1].y });
-                }
-            } else {
-                let segmentsToRemove = Math.min(snake.length - 1, Math.abs(number.value / numberMultiple));
-                snake.splice(-segmentsToRemove);
-                if (snake.length < 1) snake.push({ x: snake[0].x, y: snake[0].y });
-            }
+            // Increment numbersEaten
+            numbersEaten++;
 
             // Start flash effect
             isFlashing = true;
@@ -201,32 +205,103 @@ function checkCollision() {
 function checkWin() {
     if (!gameOver && currentCount === targetNumber) {
         gameOver = true;
+        let timeTaken = Date.now() - startTime; // Calculate time taken in milliseconds
         setTimeout(() => {
             alert('Congratulations! You reached the target number!');
-            updateLeaderboard();
+            updateLeaderboard(timeTaken);
             showLeaderboard();
         }, 10);
     }
 }
 
-function updateLeaderboard() {
-    leaderboard.push({ score: currentCount, target: targetNumber });
-    leaderboard.sort((a, b) => b.score - a.score);
+function updateLeaderboard(timeTaken) {
+    leaderboard.push({
+        id: lastRunId,
+        level: numberMultiple,
+        score: currentCount,
+        target: targetNumber,
+        time: timeTaken,
+        numbersEaten: numbersEaten
+    });
 }
 
 function showLeaderboard() {
     canvas.style.display = 'none';
     leaderboardDiv.style.display = 'block';
 
+    // Organize leaderboard by level
+    let leaderboardByLevel = {};
+
+    leaderboard.forEach(entry => {
+        if (!leaderboardByLevel[entry.level]) {
+            leaderboardByLevel[entry.level] = [];
+        }
+        leaderboardByLevel[entry.level].push(entry);
+    });
+
+    // Find best time and fewest numbersEaten for each level
+    let bestTimeByLevel = {};
+    let fewestNumbersEatenByLevel = {};
+
+    for (let level in leaderboardByLevel) {
+        let entries = leaderboardByLevel[level];
+
+        // Best time
+        let bestTimeEntry = entries.reduce((best, entry) => {
+            return !best || entry.time < best.time ? entry : best;
+        }, null);
+        bestTimeByLevel[level] = bestTimeEntry.time;
+
+        // Fewest numbers eaten
+        let fewestNumbersEatenEntry = entries.reduce((best, entry) => {
+            return !best || entry.numbersEaten < best.numbersEaten ? entry : best;
+        }, null);
+        fewestNumbersEatenByLevel[level] = fewestNumbersEatenEntry.numbersEaten;
+    }
+
     // Display leaderboard
     scoreList.innerHTML = '';
-    leaderboard.forEach((entry, index) => {
-        if (index < 10) { // Limit to top 10 scores
-            const listItem = document.createElement('li');
-            listItem.textContent = `Score: ${entry.score}, Target: ${entry.target}`;
+
+    for (let level in leaderboardByLevel) {
+        // Create a heading for the level
+        let levelHeader = document.createElement('li');
+        levelHeader.textContent = `Level: Multiples of ${level}`;
+        levelHeader.style.fontWeight = 'bold';
+        scoreList.appendChild(levelHeader);
+
+        // Get entries for this level
+        let entries = leaderboardByLevel[level];
+
+        // Sort entries by time ascending (fastest first)
+        entries.sort((a, b) => a.time - b.time);
+
+        entries.forEach(entry => {
+            let listItem = document.createElement('li');
+            listItem.style.marginLeft = '20px';
+
+            // Format time
+            let timeInSeconds = (entry.time / 1000).toFixed(2);
+
+            listItem.innerHTML = `Score: ${entry.score}, Target: ${entry.target}, Time: ${timeInSeconds}s, Numbers Eaten: ${entry.numbersEaten}`;
+
+            // Bold the most recent run
+            if (entry.id === lastRunId) {
+                listItem.style.fontWeight = 'bold';
+            }
+
+            // Color best time and fewest numbersEaten in green
+            if (entry.time === bestTimeByLevel[level]) {
+                // Highlight best time
+                listItem.innerHTML = listItem.innerHTML.replace(`Time: ${timeInSeconds}s`, `<span style="color: green;">Time: ${timeInSeconds}s</span>`);
+            }
+            if (entry.numbersEaten === fewestNumbersEatenByLevel[level]) {
+                // Highlight fewest numbers eaten
+                listItem.innerHTML = listItem.innerHTML.replace(`Numbers Eaten: ${entry.numbersEaten}`, `<span style="color: green;">Numbers Eaten: ${entry.numbersEaten}</span>`);
+            }
+
             scoreList.appendChild(listItem);
-        }
-    });
+        });
+    }
 }
 
 function clearCanvas() {
@@ -238,6 +313,7 @@ function drawText() {
     ctx.font = '20px Arial';
     ctx.fillText(`Target: ${targetNumber}`, canvas.width - 200, 30);
     ctx.fillText(`Your Count: ${currentCount}`, canvas.width - 200, 60);
+    // Removed the moves display from the game screen
 }
 
 function handleFlash() {
